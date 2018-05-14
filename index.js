@@ -103,7 +103,6 @@ try {
 function selectDB(info){
     var dblist = info.datbaseList.split("/")
     try {
-
         var serviceAccount = require(info.serviceKeyPath);
     }catch (e) {
         console.log("\n\nservice key is not exist, please check serviceKeyPath in blu-firebase-info.json\n\n");
