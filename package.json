@@ -1,0 +1,36 @@
+{
+  "name": "blu-firebase-cli",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "start": "node index.js init"
+  },
+  "bin": {
+    "blu": "./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiwonNam/Blu-firebase-cli.git"
+  },
+  "keywords": [
+    "firebase"
+  ],
+  "author": "kiwon Nam",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kiwonNam/Blu-firebase-cli/issues"
+  },
+  "homepage": "https://github.com/kiwonNam/Blu-firebase-cli#readme",
+  "dependencies": {
+    "ansi-styles": "^3.2.1",
+    "caporal": "^0.10.0",
+    "chalk": "^2.4.1",
+    "figlet": "^1.2.0",
+    "firebase-admin": "^5.12.0",
+    "fs": "0.0.1-security",
+    "inquirer": "^5.2.0",
+    "readline-sync": "^1.4.9"
+  }
+}
