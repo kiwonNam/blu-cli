@@ -51,7 +51,7 @@ caporal.parse(process.argv);
 
 function input(){
 
-    serviceKeyPath = readline.question("Input Service key path : ");
+    serviceKeyPath = readline.question("Input Service key's absolute path : ");
     db_list = readline.question("Input database list path : (bluelens-browser/db_list) ");
     if(db_list.length == 0 ){db_list = "bluelens-browser/db_list";}
 
@@ -101,7 +101,7 @@ try {
 // ======================================= about database ===================
 
 function selectDB(info){
-    var dblist = info.datbaseList.split("/")
+    var dblist = info.datbaseList.split("/");
     try {
         var serviceAccount = require(info.serviceKeyPath);
     }catch (e) {
