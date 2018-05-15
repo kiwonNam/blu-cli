@@ -1,7 +1,7 @@
 # Blu firebase : CLI
 
 [![npm version](https://badge.fury.io/js/blu-firebase-cli.svg)](https://badge.fury.io/js/blu-firebase-cli)
-<a href="https://gitter.im/ApiWay/apiway-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://badges.gitter.im/Join Chat.svg" alt="Gitter chat" height="20"></a>
+
 
 [![NPM](https://nodei.co/npm/blu-firebase-cli.png)](https://nodei.co/npm/blu-firebase-cli/)
 
