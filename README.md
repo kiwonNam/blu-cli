@@ -45,11 +45,11 @@ $ blu db
     - Set Json File 선택시: 
         * 하위 디렉토리나 json file 을 선택할 수 있다.
         * 디렉토리를 선택하면 하위 Structure을 그대로 Realtime Database 에 set한다.
-        * json file 선택시 해당 json file의 경로서부터 내용을 set한다.
+        * json file 선택시 해당 json file의 경로서부터 내용을 set다.
         
     - Get Json File 선택시:
         * 현재 Depth와 상응하는 Realtime Database의 하위 Element 목록들을 보여주며 하나를 선택하여야 한다.
-        * 선택한 Element의 하위 Element들이 json형식으로 name.json 이 현재 디렉토리에 생성된다.                    
+        * 선택한 Element의 하위 Element들이 json형식으로 <element name>.json으로 현재 디렉토리에 생성된다.                    
  
 
 
