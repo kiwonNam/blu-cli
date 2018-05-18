@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
 const inquirer = require('inquirer');
-const admin =require('firebase-admin');
+const admin = require('firebase-admin');
 const caporal = require('caporal');
 const chalk = require('chalk');
 const figlet = require('figlet');
 const fs = require('fs');
 const readline = require('readline-sync');
-var database;
-var db_list="";
+const path = require('path');
+
+
 var serviceKeyPath;
 var type;
-var path = "/";
 var accessApp;    // 여러 앱을 초기화 하기 위한 즉 , 두번째 admin 을 담을 변수
+const osUserName = require("os").userInfo().username.toString();
+const infoPath = '/Users/'+osUserName+'/.blu/'
 
 //=====================================================================================================================
 
@@ -22,28 +24,37 @@ caporal
     .action((args, options, logger) => {
         console.log(
             chalk.yellow(
-                figlet.textSync('Blu-Firebase-CLI',{horizontalLayout:'full'})
+                figlet.textSync('blu-cli',{horizontalLayout:'full'})
             )
         );
         console.log("\n\n");
-        console.log("Blu-firebase-api module initialize in this directory");
+        console.log("blu-cli module initialization");
         console.log("\n\n");
         input();
     })
-    .command('database' , 'access to database')
+    .command('db' , 'access to database')
     .action((args, options, logger) => {
 
         checkInit(false)
-            .then(function (text) {
+            .then(function (info) {
                 // 성공시
-                var information = readInfoJson();
-                selectDB(information);
+                var currentPath = process.cwd().toString();
+                var bufPath = currentPath.substring(info.topPath.length+1 , currentPath.length);
+                var dbName = bufPath.split('/')[0];
+                list = bufPath.split('/').splice(1, bufPath.split('/').length);
+                adminInitialize(info.serviceKeyPath,dbName);
+                if(dbName == "") {console.log("\n\nyou must enter to Database directory. \n\ncurrent path is "+process.cwd()+"\n\n")
+                return;}
+                doSelect(list);
+                // var information = readInfoJson();
+                // selectDB(information);
             }, function (error) {
                 // 실패시
-                console.error("you need to initialize  : --help");
+                console.error(error);
             });
     });
 caporal.parse(process.argv);
+
 
 
 // ======================================= about init ======================
@@ -52,16 +63,15 @@ caporal.parse(process.argv);
 function input(){
 
     serviceKeyPath = readline.question("Input Service key's absolute path : ");
-    db_list = readline.question("Input database list path : (bluelens-browser/db_list) ");
-    if(db_list.length == 0 ){db_list = "bluelens-browser/db_list";}
-
-    var info = {'serviceKeyPath': serviceKeyPath, 'datbaseList' : db_list};
-
-    fs.writeFile("./blu-firebase-info.json", JSON.stringify(info), function(err) {
+    // db_list = readline.question("Input database list path : (bluelens-browser/db_list) ");
+    // if(db_list.length == 0 ){db_list = "bluelens-browser/db_list";}
+    var info = {'serviceKeyPath': serviceKeyPath, 'topPath' : process.cwd()};
+    if(fs.existsSync(infoPath)===false){fs.mkdirSync(infoPath)};
+    fs.writeFile(infoPath+"blu-info.json", JSON.stringify(info), function(err) {
         if(err) {
             return console.log(err);
         }
-        console.log("save blu-firebase-info.json finish in this directory");
+        console.log("save blu-info.json finish in ~/.blu directory");
         process.exit(0);
     });
 
@@ -71,189 +81,177 @@ function input(){
 function checkInit (param) {
     return new Promise(function (fulfill, reject) {
         var isInit = false;
-        fs.readdir('./', (err, files) => {
-            files.forEach(file =>{
-                if(file == 'blu-firebase-info.json') { //json 파일만 걸러냄
-                    isInit =true;
+
+        if(fs.existsSync(infoPath)) {
+            fs.readdir(infoPath, (err, files) => {
+                files.forEach(file => {
+                    if (file == 'blu-info.json') {
+                        isInit = true;
+                    }
+                });
+                if (!isInit) reject('\n\nyou need to Initialize\n\n');
+                else {
+                    var info = readInfoJson(infoPath+'blu-info.json')
+                    if(process.cwd().indexOf(info.topPath) == -1){
+                        reject("\n\n  you need to new Initialize in this DB's root directory or check your current path.\n\n");
+                        return;
+                    }else{fulfill(info);}
                 }
             });
-            if (!isInit) reject(err);
-            else fulfill(isInit);
-        });
+        }else reject('\n\nyou need to Initialize\n\n');
     });
 }
 
 
 function adminInitialize(serviceKeyPath,database){
-try {
+    try {
 
-    var serviceAccount = require(serviceKeyPath);
-}catch (e) {
-    console.log("\n\nservice key is not exist, please check serviceKeyPath in blu-firebase-info.json\n\n");
-    process.exit(0);
-}
-       accessApp =  admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: 'https://' + database + '.firebaseio.com'
-        },'other');
-
+        var serviceAccount = require(serviceKeyPath);
+    }catch (e) {
+        console.log("\n\nservice key is not exist, please check serviceKeyPath in blu-info.json\n\n");
+        process.exit(0);
+    }
+    accessApp =  admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: 'https://' + database + '.firebaseio.com'
+    },'other');
 }
 // ======================================= about database ===================
 
-function selectDB(info){
-    var dblist = info.datbaseList.split("/");
-    try {
-        var serviceAccount = require(info.serviceKeyPath);
-    }catch (e) {
-        console.log("\n\nservice key is not exist, please check serviceKeyPath in blu-firebase-info.json\n\n");
-        process.exit(0);
-    }
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: 'https://' + dblist[0] + '.firebaseio.com'
-        });
-
-
-    var list = [];
-
-    var db = admin.database();
-    var ref = db.ref();
-    return ref.child('/'+dblist[1]).once('value').then((snapshot)=> {
-        snapshot.forEach(function (childSnapshot) {
-            list.push(childSnapshot.key);
-        });
-        if(list.length == 0 ){
-            console.log("Dabase is not exist in this project");
-            process.exit(0);
-        }
-        inquirer.prompt([{
-            type: 'list',
-            name: 'database',
-            message: 'Select database what you want to access\n',
-            choices: list
-        }]).then(answers => {
-            var jsonAnswer = JSON.parse(JSON.stringify(answers));
-            var database = jsonAnswer.database;
-            adminInitialize(info.serviceKeyPath,database);  // 선택된 데이터베이스를 기반으로 admin sdk 를 초기화 시킨다
-            doSelect();  // 초기화된 admin sdk(accessApp) 을통해 import or export를 선택하고 child를 선택한다.
-        });;
-
-    });
-}
-
-function doSelect(){
+function doSelect(list){
+    var childPath = '';
     inquirer.prompt([
         {
             type: 'list',
             name: 'type',
             message: 'What do you want to do?',
             choices: [
-                'Import Json File To Firebase',
-                'Export Json File From Firebase'
+                'Set Json File',
+                'Get Json File'
             ]
         }
     ]).then(answers =>{
         var jsonAnswer = JSON.parse(JSON.stringify(answers));
         type = jsonAnswer.type;
-        getChildList(path);
+
+        list.forEach((item)=>{
+            childPath = childPath +item +'/';
+        });
+        if(childPath == "") childPath = '/';
+        // console.log(childPath);
+        if(type.indexOf('Set') != -1){setJsonToFirebase(childPath)}
+        if(type.indexOf('Get') != -1){getJsonFromFirebase(childPath)}
     });
 }
 
+function getJsonFromFirebase(childPath){
 
-
-
-function getChildList(path){
+    var db = accessApp.database();
+    var ref = db.ref();
     var list = [];
+    var selectedChild;
+    return ref.child(childPath).once('value').then((snapshot)=> {
 
-        var db = accessApp.database();
-        var ref = db.ref();
-
-    return ref.child(path).once('value').then((snapshot)=> {
         snapshot.forEach(function (childSnapshot) {
             list.push(childSnapshot.key);
         });
         if(list.length == 0 ){
-            console.log("version child is not exist");
+            console.log('\n\nchild is not exist!\n\n');
             process.exit(0);
         }
-        inquirer.prompt([{
-            type: 'list',
-            name: 'child',
-            message: 'Select child\n',
-            choices: list
-        }]).then(answers => {
-            var jsonAnswer = JSON.parse(JSON.stringify(answers));
-            path = path +jsonAnswer.child + "/";
-            if(jsonAnswer.child.indexOf("v_") != -1) {
-                if(type.indexOf("Import") != -1 ){selectJsonFile(path);}
-                if(type.indexOf("Export") != -1 ){exportJsonFromFirebase(path , jsonAnswer.child);}
-                return;}
 
-            // console.log(path);
-            getChildList(path);
-        });;
-
-    });
-}
-
-
-function exportJsonFromFirebase(path , filename){
-    var list = [];
-    var db = accessApp.database();
-    var ref = db.ref();
-
-    return ref.child(path).once('value').then((snapshot)=> {
-        // console.log(snapshot.val());
-        fs.writeFile("./"+filename+".json", JSON.stringify(snapshot.val()), function(err) {
-            if(err) {
-                return console.log(err);
-            }
-            console.log("The file was saved!");
-            process.exit(0);
-        });
-
-    });
-
-}
-
-
-function selectJsonFile(path) {
-    var list = [];
-    fs.readdir('./', (err, files) => {
-        files.forEach(file =>{
-            if(file.indexOf('.json') != -1) { //json 파일만 걸러냄
-                list.push(file);
-            }
-        });
         inquirer.prompt([
             {
                 type: 'list',
-                name: 'file',
-                message: 'Select JSON File\n',
+                name: 'child',
+                message: 'Select to get item\n',
                 choices: list
             }
-            ]).then(answers =>{
-                var jsonAnswer = JSON.parse(JSON.stringify(answers));
-                var obj = JSON.parse(fs.readFileSync(jsonAnswer.file, 'utf8'));
-                importJsonToFirebase(path,obj);
-            })
-
+        ]).then(answers =>{
+            var jsonAnswer = JSON.parse(JSON.stringify(answers));
+            selectedChild = jsonAnswer.child;
+            // var obj = JSON.parse(fs.readFileSync(jsonAnswer.file, 'utf8'));
+            fs.writeFile("./"+selectedChild+".json", JSON.stringify(snapshot.child(selectedChild).val()), function(err) {
+                if(err) {
+                    return console.log(err);
+                }
+                console.log("The file was saved!");
+                process.exit(0);
+            });
+        });
     });
 }
-function importJsonToFirebase(path, jsonFileContent){
-    var db = accessApp.database();
-    var ref = db.ref(path);
 
-    setTimeout (function () {
-        ref.set(jsonFileContent);
-        console.log ( "finish set json data");
-        process.exit(0);
-    }, 2000);
+
+function setJsonToFirebase(childPath){
+
+    var list=[];
+    fs.readdirSync('./').map(function(child){
+        if( fs.lstatSync("./"+child).isDirectory() || child.indexOf(".json") != -1) {
+            list.push(child);
+        }
+    });
+
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'child',
+            message: 'Select to get item\n',
+            choices: list
+        }
+    ]).then(answers =>{
+        var jsonAnswer = JSON.parse(JSON.stringify(answers));
+        var selectedChild = jsonAnswer.child;
+        var parsedChild = "";
+        if(selectedChild.indexOf(".json") != -1){
+            parsedChild = selectedChild.split('.json')[0];
+        }else{
+            parsedChild = selectedChild;
+        }
+
+        childPath = childPath + parsedChild;
+        var db = accessApp.database();
+        var ref = db.ref(childPath);
+        console.log(childPath);
+        var jsonContents = JSON.parse(JSON.stringify(dirTree(process.cwd()+'/'+selectedChild)));
+        console.log(jsonContents)
+        setTimeout (function () {
+            ref.set(jsonContents);
+            console.log ( "finish set json data");
+            process.exit(0);
+        }, 2000);
+    });
 }
 
 
 
-function readInfoJson(){
-    var information = JSON.parse(fs.readFileSync('blu-firebase-info.json','utf8'));
+function dirTree(filename) {
+    var stats = fs.lstatSync(filename),
+        info = {};
+    var name = path.basename(filename)
+    if (stats.isDirectory()) {
+
+        fs.readdirSync(filename).map(function(child) {
+            if( fs.lstatSync(filename+"/"+child).isDirectory()){ // child is directory
+                var renameChild = '"'+child+'"';
+                info[child]= dirTree(filename + '/' + child);  // 디렉토리라면 재귀를 통한 DFS
+            }else if(child.indexOf(".json") != -1 ){   // child is json file
+                var buf = child.split('.json');
+                info[buf[0]] = JSON.parse(fs.readFileSync(filename + '/' + child, 'utf8'));
+            }
+        });
+    } else {
+        if (name.indexOf('.json') != -1) {
+
+            info = JSON.parse(fs.readFileSync(filename, 'utf8'));
+        }
+    }
+    return info;
+}
+
+
+
+function readInfoJson(path){
+    var information = JSON.parse(fs.readFileSync(path,'utf8'));
     return information;
 }
