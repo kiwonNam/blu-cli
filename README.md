@@ -38,14 +38,14 @@ Default git provider is Github
 ```shell
 $ blu db
 ```
-* blu db는 'blu init'을 한 경로에서 database directory로 들어가야 사용가능하다.
+* blu db는 'blu init'을 한 경로에서 database directory로 들어가야 사가능하다.
 
 * blu db 실행 후 Set JSON File / Get JSON File 을 선택할 수 있다.
 
     - Set Json File 선택시: 
-        * 하위 디렉토리나 json file 을 선택가능하다.
+        * 하위 디렉토리나 json file 을 선택할 수 있다.
         * 디렉토리를 선택하면 하위 Structure을 그대로 Realtime Database 에 set할 수 있다.
-        * json file 선택시 해당 json file의 경로서부터 내용을 set 할 수 있다.
+        * json file 선택시 해당 json file의 경로서부터 내용을 set할 수 있다.
         
     - Get Json File 선택시:
         * 현재 Depth와 상응하는 Realtime Database의 하위 Element 목록들을 보여주며 하나를 선택하여야 한다.
