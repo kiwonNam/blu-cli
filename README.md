@@ -38,7 +38,7 @@ Default git provider is Github
 ```shell
 $ blu db
 ```
-* blu db는 'blu init'을 한 경로에서 database directory로 들어가야 사가능하다.
+* blu db는 'blu init'을 한 경로에서 database directory로 들어가야 사용가능하다.
 
 * blu db 실행 후 Set JSON File / Get JSON File 을 선택할 수 있다.
 
