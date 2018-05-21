@@ -51,5 +51,7 @@ $ blu db
         * 현재 Depth와 상응하는 Realtime Database의 하위 Element 목록들을 보여주며 하나를 선택하여야 한다.
         * 선택한 Element의 하위 Element들이 json형식으로 {element name}.json으로 현재 디렉토리에 생성된다.                    
  
-
+    - Import From DB 선택시:
+        * Import From DB는 directory structure의 Database 최상위 depth에서만 사용 가능하다.
+        * Realtime Database를 Json형태로 가져와 Directory structure형태로 만들어 하위 구조를 그대로 만들어 준다.
 

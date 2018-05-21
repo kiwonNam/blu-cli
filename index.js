@@ -16,10 +16,10 @@ var accessApp;    // 여러 앱을 초기화 하기 위한 즉 , 두번째 admin
 const osUserName = require("os").userInfo().username.toString();
 const infoPath = '/Users/'+osUserName+'/.blu/'
 
-//=====================================================================================================================
+//=====================================about caporal===============================================
 
 caporal
-    .version('0.0.1')
+    .version('0.0.3')
     .command('init' ,'setup of project')
     .action((args, options, logger) => {
         console.log(
@@ -116,7 +116,7 @@ function adminInitialize(serviceKeyPath,database){
         databaseURL: 'https://' + database + '.firebaseio.com'
     },'other');
 }
-// ======================================= about database ===================
+// ======================================= about database =============================================
 
 function doSelect(list){
     var childPath = '';
@@ -127,7 +127,8 @@ function doSelect(list){
             message: 'What do you want to do?',
             choices: [
                 'Set Json File',
-                'Get Json File'
+                'Get Json File',
+                'Import from DB'
             ]
         }
     ]).then(answers =>{
@@ -141,8 +142,12 @@ function doSelect(list){
         // console.log(childPath);
         if(type.indexOf('Set') != -1){setJsonToFirebase(childPath)}
         if(type.indexOf('Get') != -1){getJsonFromFirebase(childPath)}
+        if(type.indexOf('Import') != -1){importFromDB(childPath)}
     });
 }
+
+
+// ============get==========
 
 function getJsonFromFirebase(childPath){
 
@@ -182,6 +187,7 @@ function getJsonFromFirebase(childPath){
     });
 }
 
+//===========set========
 
 function setJsonToFirebase(childPath){
 
@@ -208,13 +214,10 @@ function setJsonToFirebase(childPath){
         }else{
             parsedChild = selectedChild;
         }
-
         childPath = childPath + parsedChild;
         var db = accessApp.database();
         var ref = db.ref(childPath);
-        console.log(childPath);
         var jsonContents = JSON.parse(JSON.stringify(dirTree(process.cwd()+'/'+selectedChild)));
-        console.log(jsonContents)
         setTimeout (function () {
             ref.set(jsonContents);
             console.log ( "finish set json data");
@@ -242,13 +245,75 @@ function dirTree(filename) {
         });
     } else {
         if (name.indexOf('.json') != -1) {
-
             info = JSON.parse(fs.readFileSync(filename, 'utf8'));
         }
     }
     return info;
 }
 
+
+
+//=========import========
+
+function importFromDB(childPath) {
+
+    var db = accessApp.database();
+    var ref = db.ref();
+    if (childPath == "/"){
+        return ref.child(childPath).once('value').then((snapshot)=> {
+            // 필요한 json 값
+
+            var b = JSON.parse(JSON.stringify(snapshot.val()));
+            makeStructure(b,process.cwd());
+            console.log("\n\nFinish import DB to this directory!!! \n\n");
+        });
+    }else{
+        console.log("\n\nThis function is only can be use in Database top Depth\n\n");
+        process.exit(0);
+    }
+}
+
+function makeStructure(jsonOB , path){
+    var list = Object.keys(jsonOB);
+    list.forEach((item)=>{
+        if(typeof jsonOB[item] == "object" ){
+            var list2 = Object.keys(jsonOB[item]);
+            list2.forEach((item2) => {
+                if (typeof jsonOB[item][item2] == "object") {
+                    if(!fs.existsSync(path + '/' + item)){
+                        fs.mkdirSync(path + '/' + item, 0755);
+                    }
+                    makeStructure(jsonOB[item], path + '/' + item);
+                }
+                else {
+                    fs.writeFile(path+'/'+item+'.json', JSON.stringify(jsonOB[item]), function(err) {
+                        if(err) {
+                            return console.log(err);
+                        }
+                        // console.log("save blu-info.json finish in ~/.blu directory");
+                        process.exit(0);
+                    });
+                }
+
+            });
+        }
+    });
+}
+
+
+var deleteFolderRecursive = function(path) {
+    if( fs.existsSync(path) ) {
+            fs.readdirSync(path).forEach(function (file, index) {
+                var curPath = path + "/" + file;
+                if (fs.lstatSync(curPath).isDirectory()) { // recurse
+                    deleteFolderRecursive(curPath);
+                } else { // delete file
+                    fs.unlinkSync(curPath);
+                }
+            });
+            fs.rmdirSync(path);
+    }
+};
 
 
 function readInfoJson(path){
