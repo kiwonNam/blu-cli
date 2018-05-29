@@ -8,6 +8,7 @@ const figlet = require('figlet');
 const fs = require('fs');
 const readline = require('readline-sync');
 const path = require('path');
+const voca = require('voca');
 
 
 var serviceKeyPath;
@@ -34,7 +35,6 @@ caporal
     })
     .command('db' , 'access to database')
     .action((args, options, logger) => {
-
         checkInit(false)
             .then(function (info) {
                 // 성공시
@@ -52,6 +52,24 @@ caporal
                 // 실패시
                 console.error(error);
             });
+    })
+    .command('upload','upload json to databse without interative')
+    .option('-s,--source <source>', "json file which will upload to database")
+    .option('-d,--destination <destination>', "destination of firebase database")
+    .option('-k,--servicekey <servicekey>', "service key path of firebase project")
+    .action((args, options, logger) => {
+        if (!options.source || !options.destination || !options.servicekey) {
+            showHelp();
+        }
+
+                var dbName = options.destination.split("/")[0];
+                var child =voca.replaceAll(options.destination,dbName,"");
+                console.log(child);
+                if(child === ""){child= "/";}
+                adminInitialize(options.servicekey,dbName);
+                upload(options.source, child);
+
+
     });
 caporal.parse(process.argv);
 
@@ -74,7 +92,6 @@ function input(){
         console.log("save blu-info.json finish in ~/.blu directory");
         process.exit(0);
     });
-
 }
 
 
@@ -105,10 +122,9 @@ function checkInit (param) {
 
 function adminInitialize(serviceKeyPath,database){
     try {
-
         var serviceAccount = require(serviceKeyPath);
     }catch (e) {
-        console.log("\n\nservice key is not exist, please check serviceKeyPath in blu-info.json\n\n");
+        console.log("\n\nservice key is not exist\n\n");
         process.exit(0);
     }
     accessApp =  admin.initializeApp({
@@ -319,4 +335,40 @@ var deleteFolderRecursive = function(path) {
 function readInfoJson(path){
     var information = JSON.parse(fs.readFileSync(path,'utf8'));
     return information;
+}
+
+
+
+//========================================about  upload command ========================================
+
+function upload(source, child){
+    var trendinfo;
+    try{
+        trendinfo = JSON.parse(fs.readFileSync(source, 'utf8'));
+    }catch (e) {
+        console.log(source + " is not exist. check json file again");
+        process.exit(0);
+    }
+
+    var db = accessApp.database();
+    var ref = db.ref(child);
+
+    setTimeout (function () {
+        ref.set(trendinfo);
+        console.log ( "finish set json data");
+        process.exit(0);
+    }, 2000);
+
+}
+
+function showHelp(err) {
+    if (err) {
+        console.log(chalk.red(err));
+    }
+    let argv = []
+    process.argv.forEach(arg => {
+        argv.push(arg)
+    })
+    argv[3] = '-h'
+    caporal.parse(argv)
 }
