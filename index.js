@@ -20,7 +20,7 @@ const infoPath = '/Users/'+osUserName+'/.blu/'
 //=====================================about caporal===============================================
 
 caporal
-    .version('0.1.2')
+    .version('0.1.3')
     .command('init' ,'setup of project')
     .action((args, options, logger) => {
         console.log(
@@ -56,7 +56,7 @@ caporal
     .command('upload','upload json to databse without interative')
     .option('-t,--dbtype <dbtype>', "type of database (bq or fb)")
     .option('-s,--source <source>', "json file which will upload to database")
-    .option('-d,--destination <destination>', "destination of database.\nif databse type is fb , input depth of database. \n if database type is bq, input {projectId}/{datasetId}/{tableId}")
+    .option('-d,--destination <destination>', "destination of database.\nif databse type is fb, input depth of database. \nif database type is bq, input {projectId}/{datasetId}/{tableId}")
     .option('-k,--servicekey <servicekey>', "service key path of firebase project")
     .action((args, options, logger) => {
         if (!options.source || !options.destination || !options.servicekey || !options.dbtype || !(options.dbtype == 'fb' || options.dbtype == 'bq' )){
@@ -404,7 +404,7 @@ function insertToBigQuery(source,destination,key){
         .table(tableId)
         .insert(rows)
         .then(() => {
-            console.log(`Inserted ${rows.length} rows`);
+            console.log(`Inserted ${rows.length} rows `);
             return;
         })
         .catch(err => {
