@@ -42,4 +42,4 @@ hs_err_pid*
 blu-firebase-info.json
 node_modules
 package-lock.json
-.idea
+.idea/

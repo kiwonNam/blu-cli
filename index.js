@@ -9,7 +9,7 @@ const fs = require('fs');
 const readline = require('readline-sync');
 const path = require('path');
 const voca = require('voca');
-
+const BigQuery = require("@google-cloud/bigquery")
 
 var serviceKeyPath;
 var type;
@@ -20,7 +20,7 @@ const infoPath = '/Users/'+osUserName+'/.blu/'
 //=====================================about caporal===============================================
 
 caporal
-    .version('0.0.3')
+    .version('0.1.2')
     .command('init' ,'setup of project')
     .action((args, options, logger) => {
         console.log(
@@ -54,20 +54,28 @@ caporal
             });
     })
     .command('upload','upload json to databse without interative')
+    .option('-t,--dbtype <dbtype>', "type of database (bq or fb)")
     .option('-s,--source <source>', "json file which will upload to database")
-    .option('-d,--destination <destination>', "destination of firebase database")
+    .option('-d,--destination <destination>', "destination of database.\nif databse type is fb , input depth of database. \n if database type is bq, input {projectId}/{datasetId}/{tableId}")
     .option('-k,--servicekey <servicekey>', "service key path of firebase project")
     .action((args, options, logger) => {
-        if (!options.source || !options.destination || !options.servicekey) {
+        if (!options.source || !options.destination || !options.servicekey || !options.dbtype || !(options.dbtype == 'fb' || options.dbtype == 'bq' )){
             showHelp();
         }
 
-                var dbName = options.destination.split("/")[0];
-                var child =voca.replaceAll(options.destination,dbName,"");
-                console.log(child);
-                if(child === ""){child= "/";}
-                adminInitialize(options.servicekey,dbName);
-                upload(options.source, child);
+        // firebase 에 저장하기를 원하여 type을 fb로 주어진 경우
+        if(options.dbtype == 'fb') {
+            var dbName = options.destination.split("/")[0];
+            var child = voca.replaceAll(options.destination, dbName, "");
+            if (child === "") {
+                child = "/";
+            }
+            adminInitialize(options.servicekey, dbName);
+            upload(options.source, child);
+        }else if(options.dbtype == 'bq'){
+            insertToBigQuery(options.source,options.destination,options.servicekey)
+        }
+
 
 
     });
@@ -346,7 +354,7 @@ function upload(source, child){
     try{
         trendinfo = JSON.parse(fs.readFileSync(source, 'utf8'));
     }catch (e) {
-        console.log(source + " is not exist. check json file again");
+        console.log("\n"+source + " is not exist. check json file again\n");
         process.exit(0);
     }
 
@@ -355,7 +363,9 @@ function upload(source, child){
 
     setTimeout (function () {
         ref.set(trendinfo);
-        console.log ( "finish set json data");
+        l = source.split("/")
+        filename = l[l.length-1]
+        console.log ( "finish set "+filename);
         process.exit(0);
     }, 2000);
 
@@ -371,4 +381,83 @@ function showHelp(err) {
     })
     argv[3] = '-h'
     caporal.parse(argv)
+}
+
+
+//================== bq -=============
+
+function insertToBigQuery(source,destination,key){
+    dList = destination.split("/")
+    projectId = dList[0]
+    datasetId = dList[1]
+    tableId = dList[2]
+
+    const bigquery = new BigQuery({
+        projectId: projectId,
+        keyFilename: key
+    });
+   var rows = parseTrend(source)
+
+
+    return bigquery
+        .dataset(datasetId)
+        .table(tableId)
+        .insert(rows)
+        .then(() => {
+            console.log(`Inserted ${rows.length} rows`);
+            return;
+        })
+        .catch(err => {
+            if (err && err.name === 'PartialFailureError') {
+                if (err.errors && err.errors.length > 0) {
+                    console.log('Insert errors:');
+                    err.errors.forEach(err => console.error(err));
+                }
+            } else {
+                console.error('ERROR:', err);
+            }
+        });
+}
+
+function parseTrend(source){
+    var rows = []
+    var obj
+    try{
+        obj = JSON.parse(fs.readFileSync(source, 'utf8'));
+    }catch (e) {
+        console.log("\n"+source + " is not exist. check json file again\n");
+        process.exit(0);
+    }
+
+    var keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+        var site = keys[i]
+        var objbuf = obj[keys[i]]
+        timestamp = Object.keys(objbuf)[0]
+        trends = objbuf[timestamp]
+        ranks = Object.keys(trends)
+        for(var j = 0; j < ranks.length; j++){
+            if(typeof trends[ranks[j]] === 'string'){  // 네이버나 다음과 같이 link 가 없는 trend
+                var a = {
+                    site: site,
+                    timestamp: timestamp,
+                    rank: ranks[j],
+                    content:trends[ranks[j]]
+                }
+                rows.push(a)
+            }else if(typeof trends[ranks[j]] === 'object'){ // melon 과같이  link가 필요한 trend
+                var melon_obj = trends[ranks[j]]
+                var a = {
+                    site: site,
+                    timestamp: timestamp,
+                    rank: parseInt(ranks[j]),
+                    link: melon_obj['link'],
+                    content:melon_obj['content']
+                }
+                rows.push(a)
+            }
+        }
+
+    }
+    return rows
 }
