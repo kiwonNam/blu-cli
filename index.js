@@ -15,7 +15,7 @@ const infoPath = '/Users/'+osUserName+'/.blu/'
 //=====================================about caporal===============================================
 
 caporal
-    .version('0.1.3')
+    .version('0.1.6')
     .command('init' ,'setup of project')
     .action((args, options, logger) => {     /////// init /////////
         console.log("\n");
